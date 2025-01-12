@@ -1,13 +1,13 @@
 -- MEALS
 CREATE TABLE IF NOT EXISTS "meals" (
     "id" INTEGER UNIQUE PRIMARY KEY NOT NULL,
-    "name" TEXT UNIQUE NOT NULL,
+    "name" TEXT UNIQUE NOT NULL
 );
 -- FOODS
 CREATE TABLE IF NOT EXISTS "foods" (
     "id" INTEGER UNIQUE PRIMARY KEY NOT NULL,
     "name" TEXT UNIQUE NOT NULL,
-    "isDeleted" INTEGER NOT NULL CHECK (isDeleted IN (0, 1))
+    "deleted" INTEGER NOT NULL CHECK (deleted IN (0, 1))
 );
 -- MEASUREMENT UNITS
 CREATE TABLE IF NOT EXISTS "units" (
@@ -20,12 +20,12 @@ CREATE TABLE IF NOT EXISTS "nutritables" (
     "foodId" INTEGER NOT NULL,
     "unitId" INTEGER NOT NULL,
     -- All numerical values are not-nullable in order to enforce their correct input and/or treatment.
-    "baseMeasure" REAL NOT NULL,
+    "measure" REAL NOT NULL,
     "kcals" REAL NOT NULL,
     "carbs" REAL NOT NULL,
     "fats" REAL NOT NULL,
     "protein" REAL NOT NULL,
-    "isDeleted" INTEGER NOT NULL CHECK (isDeleted IN (0, 1)),
+    "deleted" INTEGER NOT NULL CHECK (deleted IN (0, 1)),
     -- A (food's) nutritional table belongs to a food. One food can have many nutritional tables.
     FOREIGN KEY ("foodId") REFERENCES "foods" ("id") ON DELETE CASCADE,
     -- A (food's) nutritional table "belongs" to a unit. One unit can have many nutritional tables.
@@ -67,7 +67,7 @@ VALUES (1, 'Breakfast'),
     (4, 'Afternoon'),
     (5, 'Dinner');
 -- Inserts initial foods (for ease of development only - DELETE FOR PRODUCTION)
-INSERT INTO foods (id, name, isDeleted)
+INSERT INTO foods (id, name, deleted)
 VALUES (1, 'Milk', 0),
     (2, 'Egg', 0),
     (3, 'Banana', 0);
@@ -75,12 +75,12 @@ VALUES (1, 'Milk', 0),
 INSERT INTO nutritables (
         foodId,
         unitId,
-        baseMeasure,
+        measure,
         kcals,
         carbs,
         fats,
         protein,
-        isDeleted
+        deleted
     )
 VALUES -- Milk
     (1, 2, 100, 60, 4.7, 3.2, 4.2, 0),
@@ -88,4 +88,4 @@ VALUES -- Milk
     (2, 1, 100, 147, 0.77, 9.94, 12.58, 0),
     -- Banana
     (3, 1, 100, 89, 22.84, 0.33, 1.09, 0);
--- TODO: CHECKS(isDeleted)!
+-- TODO: CHECKS(deleted)!
