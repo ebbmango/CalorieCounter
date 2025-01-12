@@ -3,7 +3,7 @@ import { StyleSheet, TextInput } from 'react-native';
 import { Button, Colors, KeyboardAwareScrollView, Text, View } from 'react-native-ui-lib';
 import { Portal } from 'react-native-paper';
 import { useQuery } from '@tanstack/react-query';
-import { getAllUnits } from 'database/queries/unitsQueries';
+import { getAllUnits } from 'database/queries/units/getAllUnits';
 import { SQLiteDatabase, useSQLiteContext } from 'expo-sqlite';
 
 import { useColors } from 'context/ColorContext';
@@ -16,13 +16,13 @@ import MacrosBarChart from 'components/Screens/Create/MacrosBarChart';
 import MacroInputField from 'components/Screens/Create/MacroInputField';
 
 import { Food, Unit } from 'database/types';
-import { getAllFoodNames } from 'database/queries/foodsQueries';
+import { getAllFoodNames } from 'database/queries/foods/getAllFoodNames';
 
 import calculateCalories from 'utils/calculateCalories';
 import { validateFoodInputs } from 'utils/validation/validateFood';
 import { Validation, ValidationStatus } from 'utils/validation/types';
 import { StaticScreenProps, useNavigation } from '@react-navigation/native';
-import { createNutritable } from 'database/queries/nutritablesQueries';
+import { createNutritable } from 'database/queries/nutritables/createNutritable';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from 'navigation';
 
@@ -170,11 +170,7 @@ export default function Add({ route }: Props) {
           <Button
             style={{ borderRadius: 12 }}
             disabled={validation.status === ValidationStatus.Error}
-            label={
-              validation.status === ValidationStatus.Warning
-                ? 'Proceed anyway'
-                : 'Add'
-            }
+            label={validation.status === ValidationStatus.Warning ? 'Proceed anyway' : 'Add'}
             onPress={() => {
               // Validates the current data
               const tempValidationStatus: Validation = validateFoodInputs({
@@ -193,7 +189,7 @@ export default function Add({ route }: Props) {
                 createNutritable(database, {
                   foodId: food.id,
                   unitId: selectedUnit.id,
-                  baseMeasure: Number(measure),
+                  measure: Number(measure),
                   kcals: Number(kcals),
                   protein: Number(protein),
                   carbs: Number(carbs),

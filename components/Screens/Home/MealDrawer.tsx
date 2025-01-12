@@ -9,13 +9,16 @@ import { RootStackParamList } from 'navigation';
 import { Food, Meal } from 'database/types';
 import { addDatabaseChangeListener, SQLiteDatabase, useSQLiteContext } from 'expo-sqlite';
 import { useQuery } from '@tanstack/react-query';
-import { deleteEntry, getEntriesByMealAndDate } from 'database/queries/entriesQueries';
+// import { deleteEntry, getEntriesByMealAndDate } from 'database/queries/entriesQueries';
+
 import { useDate } from 'context/DateContext';
-import { getNutritablesByIds } from 'database/queries/nutritablesQueries';
-import { getFoodsByIds } from 'database/queries/foodsQueries';
+import { getNutritablesByIds } from 'database/queries/nutritables/getNutritablesByIds';
+import { getFoodsByIds } from 'database/queries/foods/getFoodsByIds';
 import proportion from 'utils/proportion';
-import { getAllUnits } from 'database/queries/unitsQueries';
-import { useUnits } from 'database/hooks/useUnits';
+import { getAllUnits } from 'database/queries/units/getAllUnits';
+import useUnits from 'database/hooks/useUnits';
+import { deleteEntry } from 'database/queries/entries/deleteEntry';
+import { getEntriesByMealAndDate } from 'database/queries/entries/getEntriesByMealAndDate';
 
 type MealDrawerProps = {
   meal: Meal;
@@ -126,7 +129,7 @@ export default function MealDrawer({ meal, summaries }: MealDrawerProps) {
     }
 
     return entries.map((entry) => {
-      console.log(entry);
+      // console.log(entry);
       const nutritable = nutritables.find((table) => table.id === entry.nutritableId);
       const food = foods.find((f) => f.id === entry.foodId);
 
@@ -150,7 +153,7 @@ export default function MealDrawer({ meal, summaries }: MealDrawerProps) {
         amount: entry.amount,
         food,
         nutritableId: entry.nutritableId,
-        kcals: proportion(nutritable.kcals, entry.amount, nutritable.baseMeasure),
+        kcals: proportion(nutritable.kcals, entry.amount, nutritable.measure),
         // use optional chaining on unitId:
         unitId: entry.unitId,
       };

@@ -3,7 +3,7 @@ import { StyleSheet, TextInput } from 'react-native';
 import { Button, Colors, KeyboardAwareScrollView, Text, View } from 'react-native-ui-lib';
 import { Portal } from 'react-native-paper';
 import { useQuery } from '@tanstack/react-query';
-import { getAllUnits } from 'database/queries/unitsQueries';
+import { getAllUnits } from 'database/queries/units/getAllUnits';
 import { SQLiteDatabase, useSQLiteContext } from 'expo-sqlite';
 
 import { useColors } from 'context/ColorContext';
@@ -16,15 +16,17 @@ import MacrosBarChart from 'components/Screens/Create/MacrosBarChart';
 import MacroInputField from 'components/Screens/Create/MacroInputField';
 
 import { Food, Nutritable, Unit } from 'database/types';
-import { getAllFoodNames, updateFoodName } from 'database/queries/foodsQueries';
+// import { getAllFoodNames, updateFoodName } from 'database/queries/foodsQueries';
 
 import calculateCalories from 'utils/calculateCalories';
 import { validateFoodInputs } from 'utils/validation/validateFood';
 import { Validation, ValidationStatus } from 'utils/validation/types';
 import { StaticScreenProps, useNavigation } from '@react-navigation/native';
-import { updateNutritable } from 'database/queries/nutritablesQueries';
+import { updateNutritable } from 'database/queries/nutritables/updateNutritable';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from 'navigation';
+import { getAllFoodNames } from 'database/queries/foods/getAllFoodNames';
+import { updateFoodName } from 'database/queries/foods/updateFoodName';
 
 type Props = StaticScreenProps<{
   food: Food;
@@ -52,7 +54,7 @@ export default function Update({ route }: Props) {
   // If it doesn't use expectedKcals instead for a smoother user experience.
   const [name, setName] = useState<string>(food.name);
   const [kcals, setKcals] = useState<string>(nutritable.kcals.toString());
-  const [measure, setMeasure] = useState<string>(nutritable.baseMeasure.toString());
+  const [measure, setMeasure] = useState<string>(nutritable.measure.toString());
   const [fat, setFat] = useState<string>(nutritable.fats.toString());
   const [carbs, setCarbs] = useState<string>(nutritable.carbs.toString());
   const [protein, setProtein] = useState<string>(nutritable.protein.toString());
@@ -185,9 +187,7 @@ export default function Update({ route }: Props) {
           <Button
             style={{ borderRadius: 12 }}
             disabled={validation.status === ValidationStatus.Error}
-            label={
-              validation.status === ValidationStatus.Warning ? 'Proceed anyway' : 'Update'
-            }
+            label={validation.status === ValidationStatus.Warning ? 'Proceed anyway' : 'Update'}
             onPress={() => {
               // Validates the current data
               const tempValidationStatus: Validation = validateFoodInputs({
@@ -208,14 +208,14 @@ export default function Update({ route }: Props) {
                 }
                 if (
                   kcals !== nutritable.kcals.toString() ||
-                  measure !== nutritable.baseMeasure.toString() ||
+                  measure !== nutritable.measure.toString() ||
                   fat !== nutritable.fats.toString() ||
                   carbs !== nutritable.carbs.toString() ||
                   protein !== nutritable.protein.toString()
                 ) {
                   updateNutritable(database, {
                     nutritableId: nutritable.id,
-                    baseMeasure: Number(measure),
+                    measure: Number(measure),
                     kcals: kcals.length === 0 ? Number(expectedKcals) : Number(kcals),
                     protein: Number(protein),
                     fats: Number(fat),

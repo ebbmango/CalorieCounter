@@ -3,7 +3,7 @@ import { StyleSheet, TextInput } from 'react-native';
 import { Button, Colors, KeyboardAwareScrollView, View } from 'react-native-ui-lib';
 import { Portal } from 'react-native-paper';
 import { useQuery } from '@tanstack/react-query';
-import { getAllUnits } from 'database/queries/unitsQueries';
+import { getAllUnits } from 'database/queries/units/getAllUnits';
 import { SQLiteDatabase, useSQLiteContext } from 'expo-sqlite';
 
 import { useColors } from 'context/ColorContext';
@@ -16,15 +16,18 @@ import MacrosBarChart from 'components/Screens/Create/MacrosBarChart';
 import MacroInputField from 'components/Screens/Create/MacroInputField';
 
 import { Unit } from 'database/types';
-import { createFood, getAllFoodNames } from 'database/queries/foodsQueries';
+// import { createFood, getAllFoodNames } from 'database/queries/foodsQueries';
 
 import calculateCalories from 'utils/calculateCalories';
 import { validateFoodInputs } from 'utils/validation/validateFood';
 import { Validation, ValidationStatus } from 'utils/validation/types';
-import { createNutritable } from 'database/queries/nutritablesQueries';
+// import { createNutritable } from 'database/queries/nutritablesQueries';
 import { useNavigation } from '@react-navigation/native';
 import { RootStackParamList } from 'navigation';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { createFood } from 'database/queries/foods/createFood';
+import { getAllFoodNames } from 'database/queries/foods/getAllFoodNames';
+import { createNutritable } from 'database/queries/nutritables/createNutritable';
 
 // (!!!) This screen produces a warning due to nesting UnitPicker inside a KeyboardAwareScrollView.
 // Nevertheless, this is strictly necessary to avoid the keyboard from covering the bottom-most input fields.
@@ -207,7 +210,7 @@ export default function Create() {
                 createNutritable(database, {
                   foodId: foodQueryResult.lastInsertRowId,
                   unitId: selectedUnit.id,
-                  baseMeasure: Number(measure),
+                  measure: Number(measure),
                   kcals: kcals.length === 0 ? Number(expectedKcals) : Number(kcals),
                   protein: Number(protein),
                   carbs: Number(carbs),

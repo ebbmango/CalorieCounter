@@ -1,12 +1,10 @@
-import React, { createContext, useContext, ReactNode, useMemo } from 'react';
-import { useSQLiteContext } from 'expo-sqlite';
+import React, { createContext, useContext, ReactNode, useEffect } from 'react';
+import { addDatabaseChangeListener, useSQLiteContext } from 'expo-sqlite';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { addDatabaseChangeListener } from 'expo-sqlite';
 
-import { getEntriesByDate } from 'database/queries/entriesQueries';
-import { getNutritablesByIds } from 'database/queries/nutritablesQueries';
-import { Nutritable } from 'database/types';
 import { useDate } from 'context/DateContext';
+import { getEntriesMacros } from 'database/queries/entries/getEntriesMacros';
+import { createMealSummaries } from 'database/utils/createMealSummaries';
 
 export type MacroSummary = {
   mealId: 0 | 1 | 2 | 3 | 4 | 5;
@@ -17,14 +15,14 @@ export type MacroSummary = {
 };
 
 type MealSummaries = Record<
-  | 'day' /*       mealId: 0*/
-  | 'breakfast' /* mealId: 1*/
-  | 'morning' /*   mealId: 2*/
-  | 'lunch' /*     mealId: 3*/
-  | 'afternoon' /* mealId: 4*/
-  | 'dinner' /*    mealId: 5*/,
+  'Day' | 'Breakfast' | 'Morning' | 'Lunch' | 'Afternoon' | 'Dinner',
   MacroSummary
 >;
+
+// If you want mealId: 0 in your MacroSummary type, define it as a union or do something else:
+export type ExtendedMacroSummary = MacroSummary & {
+  mealId: 0 | 1 | 2 | 3 | 4 | 5;
+};
 
 type MealSummariesContextType = MealSummaries;
 const MealSummariesContext = createContext<MealSummariesContextType | undefined>(undefined);
@@ -43,108 +41,91 @@ type MealSummariesProviderProps = {
 
 export function MealSummariesProvider({ children }: MealSummariesProviderProps) {
   const database = useSQLiteContext();
-  const queryClient = useQueryClient();
   const date = useDate().get();
 
-  // Fetch relevant (date) entries
   const {
     data: entries = [],
-    refetch: refetchEntries,
-    isFetched: entriesFetched,
+    isFetched,
+    refetch,
   } = useQuery({
-    queryKey: ['entries'],
-    queryFn: () => getEntriesByDate(database, { date: date }),
+    queryKey: ['entries', date.toDateString()],
+    queryFn: () => getEntriesMacros(database, { date }),
     initialData: [],
   });
 
-  // Fetch relevant (entries) nutritables
-  const { data: nutritables = [], refetch: refetchNutritables } = useQuery({
-    queryKey: ['nutritables'],
-    queryFn: () => {
-      // Makes a set out of the used ids, making sure their values are unique.
-      const tableIds = new Set(entries.map((entry) => entry.nutritableId));
-      // Fetches each unique nutritable.
-      return getNutritablesByIds(database, { ids: Array.from(tableIds) });
-    },
-    initialData: [],
-    enabled: entriesFetched && entries.length > 0,
-  });
-
-  // Listen for database changes
-  React.useEffect(() => {
+  useEffect(() => {
     const listener = addDatabaseChangeListener((change) => {
-      if (change.tableName === 'entries') queryClient.invalidateQueries({ queryKey: ['entries'] });
-      if (change.tableName === 'nutritables')
-        queryClient.invalidateQueries({ queryKey: ['nutritables'] });
-    });
-    return () => {
-      listener.remove();
-    };
-  }, [refetchEntries, refetchNutritables]);
-
-  // Refetch when date changes
-  React.useEffect(() => {
-    refetchEntries();
-  }, [date, refetchEntries]);
-
-  // Refetch nutritables when entries change
-  React.useEffect(() => {
-    refetchNutritables();
-  }, [entries, refetchNutritables]);
-
-  // Calculate Summaries
-  const summaries: MealSummaries = useMemo(() => {
-    const empty = { kcals: 0, fat: 0, protein: 0, carbs: 0 };
-
-    const mealSummaries: MealSummaries = {
-      day: { mealId: 0, ...empty },
-      breakfast: { mealId: 1, ...empty },
-      morning: { mealId: 2, ...empty },
-      lunch: { mealId: 3, ...empty },
-      afternoon: { mealId: 4, ...empty },
-      dinner: { mealId: 5, ...empty },
-    };
-
-    if (entries.length === 0 || nutritables.length === 0) {
-      return mealSummaries;
-    }
-
-    const nutritableMap = new Map<number, Nutritable>();
-    nutritables.forEach((n) => nutritableMap.set(n.id, n));
-
-    entries.forEach((entry) => {
-      const nutritable = nutritableMap.get(entry.nutritableId);
-      if (!nutritable) return;
-
-      const ratio = entry.amount / nutritable.baseMeasure;
-
-      const mealSummary = Object.values(mealSummaries).find(
-        (summary) => summary.mealId === entry.mealId
-      );
-
-      if (mealSummary) {
-        mealSummary.kcals += nutritable.kcals * ratio;
-        mealSummary.fat += nutritable.fats * ratio;
-        mealSummary.protein += nutritable.protein * ratio;
-        mealSummary.carbs += nutritable.carbs * ratio;
+      if (change.tableName === 'nutritables' || change.tableName === 'entries') {
+        refetch();
       }
     });
 
-    // Calculate day summary
-    mealSummaries.day = Object.values(mealSummaries).reduce((total, meal) => ({
-      mealId: 0,
-      kcals: total.kcals + meal.kcals,
-      fat: total.fat + meal.fat,
-      protein: total.protein + meal.protein,
-      carbs: total.carbs + meal.carbs,
-    }));
+    return () => {
+      listener.remove();
+    };
+  }, []);
 
-    return mealSummaries;
-  }, [entries, nutritables]);
+  const mealSummaries: MealSummaries = React.useMemo(() => {
+    if (!isFetched) {
+      return {
+        Day: { mealId: 0, kcals: 0, fat: 0, carbs: 0, protein: 0 },
+        Breakfast: { mealId: 1, kcals: 0, fat: 0, carbs: 0, protein: 0 },
+        Morning: { mealId: 2, kcals: 0, fat: 0, carbs: 0, protein: 0 },
+        Lunch: { mealId: 3, kcals: 0, fat: 0, carbs: 0, protein: 0 },
+        Afternoon: { mealId: 4, kcals: 0, fat: 0, carbs: 0, protein: 0 },
+        Dinner: { mealId: 5, kcals: 0, fat: 0, carbs: 0, protein: 0 },
+      };
+    }
+    
+    const summariesMap = createMealSummaries(entries);
+
+    return {
+      Day: {
+        mealId: 0,
+        kcals: summariesMap[0]?.kcals ?? 0,
+        fat: summariesMap[0]?.fat ?? 0,
+        carbs: summariesMap[0]?.carbs ?? 0,
+        protein: summariesMap[0]?.protein ?? 0,
+      },
+      Breakfast: {
+        mealId: 1,
+        kcals: summariesMap[1]?.kcals ?? 0,
+        fat: summariesMap[1]?.fat ?? 0,
+        carbs: summariesMap[1]?.carbs ?? 0,
+        protein: summariesMap[1]?.protein ?? 0,
+      },
+      Morning: {
+        mealId: 2,
+        kcals: summariesMap[2]?.kcals ?? 0,
+        fat: summariesMap[2]?.fat ?? 0,
+        carbs: summariesMap[2]?.carbs ?? 0,
+        protein: summariesMap[2]?.protein ?? 0,
+      },
+      Lunch: {
+        mealId: 3,
+        kcals: summariesMap[3]?.kcals ?? 0,
+        fat: summariesMap[3]?.fat ?? 0,
+        carbs: summariesMap[3]?.carbs ?? 0,
+        protein: summariesMap[3]?.protein ?? 0,
+      },
+      Afternoon: {
+        mealId: 4,
+        kcals: summariesMap[4]?.kcals ?? 0,
+        fat: summariesMap[4]?.fat ?? 0,
+        carbs: summariesMap[4]?.carbs ?? 0,
+        protein: summariesMap[4]?.protein ?? 0,
+      },
+      Dinner: {
+        mealId: 5,
+        kcals: summariesMap[5]?.kcals ?? 0,
+        fat: summariesMap[5]?.fat ?? 0,
+        carbs: summariesMap[5]?.carbs ?? 0,
+        protein: summariesMap[5]?.protein ?? 0,
+      },
+    };
+  }, [entries, isFetched]);
 
   return (
-    <MealSummariesContext.Provider value={{ ...summaries }}>
-      {children}
-    </MealSummariesContext.Provider>
+    <MealSummariesContext.Provider value={mealSummaries}>{children}</MealSummariesContext.Provider>
   );
 }

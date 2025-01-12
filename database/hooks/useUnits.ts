@@ -1,8 +1,15 @@
 import { useQuery } from '@tanstack/react-query';
 import { SQLiteDatabase } from 'expo-sqlite';
-import { getAllUnits } from 'database/queries/unitsQueries';
+import { getAllUnits } from 'database/queries/units/getAllUnits';
+import { Unit } from 'database/types';
 
-export function useUnits(database: SQLiteDatabase) {
+type unitsData = {
+    units: Unit[];
+    unitsFetched: boolean;
+    unitsLoading: boolean;
+}
+
+const useUnits = (database: SQLiteDatabase): unitsData => {
     const {
         data: units,
         isFetched: unitsFetched,
@@ -15,3 +22,5 @@ export function useUnits(database: SQLiteDatabase) {
 
     return { units, unitsFetched, unitsLoading };
 }
+
+export default useUnits

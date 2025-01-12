@@ -1,4 +1,4 @@
-import { getAllFoods } from 'database/queries/foodsQueries';
+import { getAllFoods } from 'database/queries/foods/getAllFoods';
 import { addDatabaseChangeListener, SQLiteDatabase, useSQLiteContext } from 'expo-sqlite';
 import { FlatList } from 'react-native-gesture-handler';
 import { useQuery } from '@tanstack/react-query';

@@ -97,10 +97,10 @@ export default function FoodReadDetails({
   // (!!!) This is sometimes breaking when the user tries to select a newly-created nutritable
   useEffect(() => {
     if (!selectedNutritable) return;
-    setProtein((amount / selectedNutritable.baseMeasure) * selectedNutritable.protein);
-    setFats((amount / selectedNutritable.baseMeasure) * selectedNutritable.fats);
-    setCarbs((amount / selectedNutritable.baseMeasure) * selectedNutritable.carbs);
-    setKcals((amount * selectedNutritable.kcals) / selectedNutritable.baseMeasure);
+    setProtein((amount / selectedNutritable.measure) * selectedNutritable.protein);
+    setFats((amount / selectedNutritable.measure) * selectedNutritable.fats);
+    setCarbs((amount / selectedNutritable.measure) * selectedNutritable.carbs);
+    setKcals((amount * selectedNutritable.kcals) / selectedNutritable.measure);
   }, [amount, selectedNutritable]);
 
   const availableUnits = allUnits.filter(

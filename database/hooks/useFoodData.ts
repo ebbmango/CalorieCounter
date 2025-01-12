@@ -1,9 +1,9 @@
 import { useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { getNutritablesByFood } from 'database/queries/nutritablesQueries';
-import { getFoodById } from 'database/queries/foodsQueries';
+import { getNutritablesByFood } from 'database/queries/nutritables/getNutritablesByFood';
+import { getFoodById } from 'database/queries/foods/getFoodById';
 import { addDatabaseChangeListener, SQLiteDatabase } from 'expo-sqlite';
-import { useUnits } from './useUnits';
+import useUnits from './useUnits';
 import { Food, Nutritable, Unit } from 'database/types';
 
 type UseFoodDataProps = {

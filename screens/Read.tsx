@@ -11,6 +11,8 @@ import { Colors, KeyboardAwareScrollView, Text, TouchableOpacity, View } from 'r
 import mealKey from 'utils/mealKey';
 import toCapped from 'utils/toCapped';
 import proportion from 'utils/proportion';
+import { validateEntryInputs } from 'utils/validation/validateEntry';
+import { Validation, ValidationStatus } from 'utils/validation/types';
 
 import { useColors } from 'context/ColorContext';
 import { useDate } from 'context/DateContext';
@@ -18,10 +20,11 @@ import { useMealSummaries } from 'context/SummariesContext';
 
 import { Meal, Nutritable } from 'database/types';
 import { useFoodData } from 'database/hooks/useFoodData';
-import { deleteFood } from 'database/queries/foodsQueries';
-import { createEntry } from 'database/queries/entriesQueries';
-import { deleteNutritable } from 'database/queries/nutritablesQueries';
+import { deleteFood } from 'database/queries/foods/deleteFood';
+import { createEntry } from 'database/queries/entries/createEntry';
+import { deleteNutritable } from 'database/queries/nutritables/deleteNutritable';
 
+import Dialogs from 'components/Shared/Dialogs';
 import IconSVG from 'components/Shared/icons/IconSVG';
 import MacrosAccordion from 'components/Screens/Read/MacrosAccordion';
 import KcalsTransition from 'components/Screens/Read/KcalsTransition';
@@ -30,10 +33,7 @@ import MacroInputField from 'components/Screens/Create/MacroInputField';
 import ToggleView, { ViewMode } from 'components/Screens/Read/ToggleView';
 import HorizontalUnitPicker from 'components/Screens/Read/HorizontalUnitPicker';
 import SegmentedMacrosBarChart from 'components/Screens/Read/SegmentedMacrosBarChart';
-import { Validation, ValidationStatus } from 'utils/validation/types';
-import Dialogs from 'components/Shared/Dialogs';
-import { validateEntryInputs } from 'utils/validation/validateEntry';
-import toSQLiteParams from 'utils/toSQLiteParams';
+import { MEAL_ID_TO_NAME } from 'database/utils/constants';
 
 type Props = StaticScreenProps<{
   foodId: number;
@@ -47,8 +47,8 @@ export default function Read({ route }: Props) {
   const screenWidth = Dimensions.get('window').width;
 
   // Comparative-view-specific data retrieval
-  const daySummary = useMealSummaries().day;
-  const mealSummary = useMealSummaries()[mealKey(meal.id)];
+  const daySummary = useMealSummaries().Day;
+  const mealSummary = useMealSummaries()[MEAL_ID_TO_NAME[meal.id]];
 
   // General-purpose data retrieval
   const date = useDate();
@@ -90,7 +90,7 @@ export default function Read({ route }: Props) {
       fats: tableFats,
       carbs: tableCarbs,
       protein: tableProtein,
-      baseMeasure,
+      measure: baseMeasure,
     } = selectedNutritable;
 
     const entryAmount = Number(measurement);

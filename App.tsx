@@ -20,7 +20,7 @@ export default function App() {
       <QueryClientProvider client={queryClient}>
         {/* Enables access to the SQLite database */}
         <SQLiteProvider
-          databaseName="database.db"
+          databaseName="b.db"
           options={{ enableChangeListener: true }}
           assetSource={{
             assetId: require('assets/database/appDatabase.db'),

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { SQLiteDatabase, useSQLiteContext } from 'expo-sqlite';
+import { addDatabaseChangeListener, SQLiteDatabase, useSQLiteContext } from 'expo-sqlite';
 import { QueryClient, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Colors, View } from 'react-native-ui-lib';
 import { Dimensions, Pressable, ScrollView, StyleSheet } from 'react-native';
@@ -10,7 +10,7 @@ import { useDate } from 'context/DateContext';
 
 // Utils
 import { formatDate } from 'utils/formatDate';
-import getAllMeals from 'database/queries/mealsQueries';
+import getAllMeals from 'database/queries/meals/getAllMeals';
 
 // Components
 import PieChart from 'components/Screens/Home/PieChart';
@@ -23,6 +23,7 @@ import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/dat
 import { useNavigation } from '@react-navigation/native';
 import { useMealSummaries } from 'context/SummariesContext';
 import toCapped from 'utils/toCapped';
+import { useMeals } from 'database/hooks/useMeals';
 
 type MacroName = keyof MacroColors;
 
@@ -67,19 +68,14 @@ export default function Home() {
 
   const database: SQLiteDatabase = useSQLiteContext();
   const queryClient: QueryClient = useQueryClient();
-  const { day, breakfast, morning, lunch, afternoon, dinner } = useMealSummaries();
 
-  // Retrieving the list of daily meals from the database
-  const { data: meals = [] } = useQuery({
-    queryKey: ['meals'],
-    queryFn: () => getAllMeals(database),
-    initialData: [],
-  });
+  const { meals } = useMeals({ database });
+  const { Day, Breakfast, Morning, Lunch, Afternoon, Dinner } = useMealSummaries();
 
   const macronutrients: { name: MacroName; grams: number }[] = [
-    { name: 'fat', grams: day.fat },
-    { name: 'protein', grams: day.protein },
-    { name: 'carbs', grams: day.carbs },
+    { name: 'fat', grams: Day.fat },
+    { name: 'protein', grams: Day.protein },
+    { name: 'carbs', grams: Day.carbs },
   ];
 
   // Adding insignificant data to ensure the drawing of the graph even for empty macros
@@ -91,22 +87,22 @@ export default function Home() {
     {
       color: colors.get('fat'),
       iconName: 'bacon-solid',
-      amount: toCapped(day.fat, 2),
+      amount: toCapped(Day.fat, 2),
     },
     {
       color: colors.get('carbs'),
       iconName: 'wheat-solid',
-      amount: toCapped(day.carbs, 2),
+      amount: toCapped(Day.carbs, 2),
     },
     {
       color: colors.get('protein'),
       iconName: 'meat-solid',
-      amount: toCapped(day.protein, 2),
+      amount: toCapped(Day.protein, 2),
     },
     {
       color: colors.get('kcals'),
       iconName: 'ball-pile-solid',
-      amount: toCapped(day.kcals, 2),
+      amount: toCapped(Day.kcals, 2),
     },
   ] as const;
 
@@ -164,7 +160,7 @@ export default function Home() {
         <View style={{ gap: 10, paddingTop: 10, paddingBottom: 40 }}>
           {meals.map((meal) => {
             const emptySummary = { mealId: meal.id, kcals: 0, fat: 0, protein: 0, carbs: 0 };
-            const mealSummary = [breakfast, morning, lunch, afternoon, dinner].find(
+            const mealSummary = [Breakfast, Morning, Lunch, Afternoon, Dinner].find(
               (summary) => summary.mealId === meal.id
             );
             return (
@@ -172,7 +168,7 @@ export default function Home() {
                 key={meal.id}
                 meal={meal}
                 summaries={{
-                  day,
+                  day: Day,
                   meal: mealSummary || emptySummary,
                 }}
               />
