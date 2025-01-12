@@ -29,9 +29,8 @@ CREATE TABLE IF NOT EXISTS "nutritables" (
     -- A (food's) nutritional table belongs to a food. One food can have many nutritional tables.
     FOREIGN KEY ("foodId") REFERENCES "foods" ("id") ON DELETE CASCADE,
     -- A (food's) nutritional table "belongs" to a unit. One unit can have many nutritional tables.
-    FOREIGN KEY ("unitId") REFERENCES "units" ("id"),
+    FOREIGN KEY ("unitId") REFERENCES "units" ("id")
     -- A food can have only one nutritional table per measurement unit.
-    UNIQUE (foodId, unitId)
 );
 -- ENTRIES
 CREATE TABLE IF NOT EXISTS "entries" (
