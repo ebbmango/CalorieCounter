@@ -11,7 +11,7 @@ const query =
         u.symbol AS unitSymbol,
         e.amount AS amount,
         n.deleted AS nutritableDeleted,
-        (n.kcals * (e.amount / NULLIF(n.measure, 0))) AS kcals,
+        (n.kcals * (e.amount / NULLIF(n.measure, 0))) AS kcals
     FROM
         entries e
     JOIN
@@ -40,8 +40,10 @@ export const getEntriesListing = async (
         query,
         toSQLiteParams({
             date: params.date.toDateString(),
+            mealId: params.mealId
         })
     );
+
     // Treating the result
     return queryResult.map((row: any) => (
         {

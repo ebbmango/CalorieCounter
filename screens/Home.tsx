@@ -108,6 +108,12 @@ export default function Home() {
 
   // SECTION 4: Component itself
 
+  useEffect(() => {
+    const listener = addDatabaseChangeListener((change) => {
+      console.log(database.getAllSync('SELECT * FROM nutritables;').length);
+    });
+  });
+
   return (
     <>
       {/* Modal */}
@@ -163,16 +169,7 @@ export default function Home() {
             const mealSummary = [Breakfast, Morning, Lunch, Afternoon, Dinner].find(
               (summary) => summary.mealId === meal.id
             );
-            return (
-              <MealDrawer
-                key={meal.id}
-                meal={meal}
-                summaries={{
-                  day: Day,
-                  meal: mealSummary || emptySummary,
-                }}
-              />
-            );
+            return <MealDrawer key={meal.id} meal={meal} />;
           })}
         </View>
       </ScrollView>

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Dimensions, StyleSheet, TouchableOpacity } from 'react-native';
 import { ExpandableSection, Text, View, Colors, Button, Drawer, Icon } from 'react-native-ui-lib';
 
@@ -6,7 +6,7 @@ import IconSVG from '../../Shared/icons/IconSVG';
 import RotatingCaret from './RotatingCaret';
 import { NavigationProp, useNavigation } from '@react-navigation/native';
 import { RootStackParamList } from 'navigation';
-import { Food, Meal } from 'database/types';
+import { EntryListing, Food, Meal } from 'database/types';
 import { addDatabaseChangeListener, SQLiteDatabase, useSQLiteContext } from 'expo-sqlite';
 import { useQuery } from '@tanstack/react-query';
 // import { deleteEntry, getEntriesByMealAndDate } from 'database/queries/entriesQueries';
@@ -19,13 +19,10 @@ import { getAllUnits } from 'database/queries/units/getAllUnits';
 import useUnits from 'database/hooks/useUnits';
 import { deleteEntry } from 'database/queries/entries/deleteEntry';
 import { getEntriesByMealAndDate } from 'database/queries/entries/getEntriesByMealAndDate';
+import { getEntriesListing } from 'database/queries/entries/getEntriesListing';
 
 type MealDrawerProps = {
   meal: Meal;
-  summaries: {
-    day: MacroSummary;
-    meal: MacroSummary;
-  };
 };
 
 type DrawerHeaderProps = {
@@ -35,23 +32,10 @@ type DrawerHeaderProps = {
 
 type DrawerBodyProps = {
   meal: Meal;
-  entries: EntrySummary[];
-  summaries: {
-    day: MacroSummary;
-    meal: MacroSummary;
-  };
+  listings: EntryListing[];
 };
 
-type EntrySummary = {
-  id: number;
-  amount: number;
-  food: Food;
-  nutritableId: number;
-  unit: string;
-  kcals: number;
-};
-
-export default function MealDrawer({ meal, summaries }: MealDrawerProps) {
+export default function MealDrawer({ meal }: MealDrawerProps) {
   const [expanded, setExpanded] = useState(false);
 
   const date = useDate();
@@ -64,108 +48,25 @@ export default function MealDrawer({ meal, summaries }: MealDrawerProps) {
     isFetched: entriesFetched,
     isLoading: entriesLoading,
   } = useQuery({
-    queryKey: [`MealNo.${meal.id}Entries`],
-    queryFn: () => getEntriesByMealAndDate(database, { date: date.get(), mealId: meal.id }),
+    queryKey: [meal, `entries`],
+    queryFn: () => getEntriesListing(database, { date: date.get(), mealId: meal.id }),
     initialData: [],
   });
-
-  // FETCHING all relevant NUTRITABLES
-  const {
-    data: nutritables = [],
-    refetch: refetchNutritables,
-    isFetched: nutritablesFetched,
-    isLoading: nutritablesLoading,
-  } = useQuery({
-    queryKey: [`MealNo.${meal.id}Nutritables`],
-    queryFn: () => {
-      const tableIds = new Set(entries.map((entry) => entry.nutritableId));
-      return getNutritablesByIds(database, { ids: Array.from(tableIds) });
-    },
-    initialData: [],
-    enabled: entriesFetched && entries.length > 0,
-  });
-
-  // FETCHING all relevant FOODS
-  const {
-    data: foods = [],
-    refetch: refetchFoods,
-    isFetched: foodsFetched,
-    isLoading: foodsLoading,
-  } = useQuery({
-    queryKey: [`MealNo.${meal.id}Foods`],
-    queryFn: () => {
-      const tableIds = new Set(entries.map((entry) => entry.foodId));
-      return getFoodsByIds(database, { ids: Array.from(tableIds) });
-    },
-    initialData: [],
-    enabled: entriesFetched && entries.length > 0,
-  });
-
-  const { units, unitsFetched } = useUnits(database);
 
   useEffect(() => {
-    const listener = addDatabaseChangeListener((change) => {
-      if (change.tableName === 'entries') refetchEntries();
-      if (change.tableName === 'nutritables') refetchNutritables();
-      if (change.tableName === 'foods') refetchFoods();
-    });
+    const listener = addDatabaseChangeListener((change) => refetchEntries());
+
     return () => {
       listener.remove();
     };
-  }, []);
-
-  useEffect(() => {
-    refetchEntries();
-  }, [date.get()]);
-
-  useEffect(() => {
-    refetchFoods();
-    refetchNutritables();
-  }, [entries]);
-
-  const entriesSummary: EntrySummary[] = useMemo(() => {
-    if (!foodsFetched || !nutritablesFetched || !unitsFetched) {
-      return [];
-    }
-
-    return entries.map((entry) => {
-      // console.log(entry);
-      const nutritable = nutritables.find((table) => table.id === entry.nutritableId);
-      const food = foods.find((f) => f.id === entry.foodId);
-
-      if (!nutritable) {
-        // Fallback if no matching nutritable exists
-        return {
-          id: entry.id,
-          amount: entry.amount,
-          food,
-          nutritableId: entry.nutritableId,
-          kcals: 0,
-          unitId: entry.unitId,
-        };
-      }
-
-      // console.log(units);
-      // console.log(nutritable);
-
-      return {
-        id: entry.id,
-        amount: entry.amount,
-        food,
-        nutritableId: entry.nutritableId,
-        kcals: proportion(nutritable.kcals, entry.amount, nutritable.measure),
-        // use optional chaining on unitId:
-        unitId: entry.unitId,
-      };
-    });
-  }, [entries, nutritables, foods, foodsFetched, nutritablesFetched, units, unitsFetched]);
+  });
 
   return (
     <ExpandableSection
       expanded={expanded}
       onPress={() => setExpanded(!expanded)}
       sectionHeader={<DrawerHeader mealName={meal.name} expanded={expanded} />}>
-      <DrawerBody meal={meal} entries={entriesSummary} />
+      <DrawerBody meal={meal} listings={entries} />
     </ExpandableSection>
   );
 }
@@ -200,84 +101,98 @@ function DrawerHeader({ expanded, mealName }: DrawerHeaderProps) {
 
 // This is the body for each meal's drawer.
 // It should contain: each food, its amount, its caloric total; "add food" button.
-function DrawerBody({ meal, entries }: DrawerBodyProps) {
+function DrawerBody({ meal, listings }: DrawerBodyProps) {
   const database: SQLiteDatabase = useSQLiteContext();
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
   const screenWidth = Dimensions.get('window').width;
 
-  const { units } = useUnits(database);
-
   return (
     <View style={styles.sectionBody}>
       {/* Each entry COMES HERE*/}
-      {entries?.map(
-        (entry) =>
-          entry.food && (
-            <Drawer
-              disableHaptic
-              itemsTintColor=""
-              style={{ flex: 1, borderRadius: 100 }}
-              key={entry.id}
-              bounciness={100}
-              fullSwipeRight
-              onFullSwipeRight={() => deleteEntry(database, { entryId: entry.id })}
-              rightItems={[
-                {
-                  customElement: (
-                    <View centerH>
-                      <IconSVG
-                        name="trash-circle-solid"
-                        color={Colors.violet40}
-                        width={28}
-                        // style={{ marginRight: 2 }}
-                      />
-                    </View>
-                  ),
-                  style: { borderRadius: 100 },
-                  background: Colors.grey80,
-                  onPress: () => {
-                    deleteEntry(database, { entryId: entry.id });
-                  },
-                },
-              ]}>
-              <View row key={entry.id} style={{ flex: 1, width: screenWidth * 0.8 * 0.88 }}>
-                <View
-                  flex
+      {listings.map(
+        (listing) =>
+          listing && (
+            <View flex row center style={{ overflow: 'visible', gap: 6 }} key={listing.entryId}>
+              {listing.nutritableDeleted ? (
+                <IconSVG
+                  name="triangle-exclamation-solid"
+                  width={20}
+                  color={Colors.violet40}
                   style={{
-                    // width:
-                    paddingStart: 20,
-                    paddingEnd: 8,
-                    backgroundColor: Colors.violet80,
-                    paddingVertical: 8,
-                    borderTopStartRadius: 100,
-                    borderBottomStartRadius: 100,
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    gap: 4,
-                  }}>
-                  {/* <Text violet40>{`${entry.kcals} kcal `}</Text> */}
-                  <Text style={{ flex: 1, fontSize: 16 }}>{entry.food.name}</Text>
-                  <Text
-                    violet50>{`${entry.amount}${units.find((u) => u.id === entry.unitId)?.symbol}`}</Text>
-                </View>
+                    marginVertical: 'auto',
+                  }}
+                />
+              ) : null}
+              <Drawer
+                disableHaptic
+                itemsTintColor=""
+                style={{ flex: 1, borderRadius: 100 }}
+                bounciness={100}
+                fullSwipeRight
+                onFullSwipeRight={() => deleteEntry(database, { entryId: listing.entryId })}
+                rightItems={[
+                  {
+                    customElement: (
+                      <View centerH>
+                        <IconSVG
+                          name="trash-circle-solid"
+                          color={Colors.violet40}
+                          width={28}
+                          // style={{ marginRight: 2 }}
+                        />
+                      </View>
+                    ),
+                    style: { borderRadius: 100 },
+                    background: Colors.grey80,
+                    onPress: () => {
+                      deleteEntry(database, { entryId: listing.entryId });
+                    },
+                  },
+                ]}>
                 <View
                   row
-                  center
+                  key={listing.entryId}
                   style={{
-                    backgroundColor: Colors.violet50,
-                    borderTopEndRadius: 100,
-                    borderBottomEndRadius: 100,
-                    minWidth: 68,
-                    paddingEnd: 12,
-                    paddingStart: 8,
-                    paddingVertical: 4,
-                    gap: 4,
+                    flex: 1,
+                    width: screenWidth * 0.8 * 0.88 - (listing.nutritableDeleted ? 26 : 0),
                   }}>
-                  <IconSVG name="ball-pile-solid" color={Colors.violet40} width={12} />
-                  <Text violet40>{entry.kcals}</Text>
+                  <View
+                    flex
+                    style={{
+                      // width:
+                      paddingStart: 20,
+                      paddingEnd: 8,
+                      backgroundColor: Colors.violet80,
+                      paddingVertical: 8,
+                      borderTopStartRadius: 100,
+                      borderBottomStartRadius: 100,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 4,
+                    }}>
+                    {/* <Text violet40>{`${entry.kcals} kcal `}</Text> */}
+                    <Text style={{ flex: 1, fontSize: 16 }}>{listing.foodName}</Text>
+                    <Text violet50>{`${listing.amount}${listing.unitSymbol}`}</Text>
+                  </View>
+                  <View
+                    row
+                    center
+                    style={{
+                      backgroundColor: Colors.violet50,
+                      borderTopEndRadius: 100,
+                      borderBottomEndRadius: 100,
+                      minWidth: 68,
+                      paddingEnd: 12,
+                      paddingStart: 8,
+                      paddingVertical: 4,
+                      gap: 4,
+                    }}>
+                    <IconSVG name="ball-pile-solid" color={Colors.violet40} width={12} />
+                    <Text violet40>{listing.kcals}</Text>
+                  </View>
                 </View>
-              </View>
-            </Drawer>
+              </Drawer>
+            </View>
           )
       )}
 
@@ -319,5 +234,6 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'visible',
   },
 });

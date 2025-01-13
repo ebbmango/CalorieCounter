@@ -52,7 +52,6 @@ const RootStack = () => {
             animation: 'slide_from_right',
           })}
         />
-
         <Stack.Screen
           name="Create"
           component={Create}

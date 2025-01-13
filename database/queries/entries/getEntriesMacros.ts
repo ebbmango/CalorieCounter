@@ -27,8 +27,6 @@ export const getEntriesMacros = async (
     database: SQLiteDatabase,
     params: { date: Date }
 ): Promise<EntryMacros[]> => {
-    console.log("aa")
-
     // Running the query
     const queryResult = await database.getAllAsync(
         query,
