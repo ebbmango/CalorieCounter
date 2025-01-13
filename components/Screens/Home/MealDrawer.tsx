@@ -54,8 +54,11 @@ export default function MealDrawer({ meal }: MealDrawerProps) {
   });
 
   useEffect(() => {
-    const listener = addDatabaseChangeListener((change) => refetchEntries());
+    refetchEntries();
+  }, [date.get()]);
 
+  useEffect(() => {
+    const listener = addDatabaseChangeListener((change) => refetchEntries());
     return () => {
       listener.remove();
     };

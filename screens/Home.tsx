@@ -67,10 +67,9 @@ export default function Home() {
   // SECTION 3: Database Logic
 
   const database: SQLiteDatabase = useSQLiteContext();
-  const queryClient: QueryClient = useQueryClient();
 
   const { meals } = useMeals({ database });
-  const { Day, Breakfast, Morning, Lunch, Afternoon, Dinner } = useMealSummaries();
+  const { Day } = useMealSummaries();
 
   const macronutrients: { name: MacroName; grams: number }[] = [
     { name: 'fat', grams: Day.fat },
@@ -107,15 +106,6 @@ export default function Home() {
   ] as const;
 
   // SECTION 4: Component itself
-
-  useEffect(() => {
-    const listener = addDatabaseChangeListener((change) => {
-      console.log(database.getAllSync('SELECT * FROM nutritables;').length);
-    });
-
-    return () => listener.remove();
-  }, []);
-
   return (
     <>
       {/* Modal */}
@@ -167,10 +157,6 @@ export default function Home() {
         {/* Meals' List */}
         <View style={{ gap: 10, paddingTop: 10, paddingBottom: 40 }}>
           {meals.map((meal) => {
-            const emptySummary = { mealId: meal.id, kcals: 0, fat: 0, protein: 0, carbs: 0 };
-            const mealSummary = [Breakfast, Morning, Lunch, Afternoon, Dinner].find(
-              (summary) => summary.mealId === meal.id
-            );
             return <MealDrawer key={meal.id} meal={meal} />;
           })}
         </View>
