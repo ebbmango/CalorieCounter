@@ -112,7 +112,9 @@ export default function Home() {
     const listener = addDatabaseChangeListener((change) => {
       console.log(database.getAllSync('SELECT * FROM nutritables;').length);
     });
-  });
+
+    return () => listener.remove();
+  }, []);
 
   return (
     <>
