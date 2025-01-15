@@ -10,8 +10,11 @@ import { Suspense } from 'react';
 import { Text } from 'react-native-ui-lib';
 import { SQLiteProvider } from 'expo-sqlite';
 import { MealSummariesProvider } from 'context/SummariesContext';
+import { LogBox } from 'react-native';
 
 const queryClient = new QueryClient();
+
+LogBox.ignoreAllLogs(true);
 
 export default function App() {
   return (
@@ -20,7 +23,7 @@ export default function App() {
       <QueryClientProvider client={queryClient}>
         {/* Enables access to the SQLite database */}
         <SQLiteProvider
-          databaseName="c.db"
+          databaseName="sqliteDatabase.db"
           options={{ enableChangeListener: true }}
           assetSource={{
             assetId: require('assets/database/appDatabase.db'),
